@@ -1,35 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Structure */
-struct Student {
+#define MAX 100
+
+// Structure
+struct student {
     int id;
     char name[50];
     float marks;
 };
 
-/* Function declarations */
-void writeRecords(struct Student s[], int n, FILE *fp);
-void createIndex(FILE *fp, long pos[], int n);
-void displayRecord(FILE *fp, long pos[], int index);
-
-int main() {
-    int n, i, choice;
-    struct Student s[100];
-    long pos[100];
-
-    FILE *fp = fopen("students.txt", "w+");
-
+// Function to write records in ASCII file
+void writeRecords(struct student s[], int n) {
+    FILE *fp = fopen("data.txt", "w");
     if (fp == NULL) {
-        printf("Error opening file\n");
-        return 1;
+        printf("File error\n");
+        return;
     }
+
+    for (int i = 0; i < n; i++) {
+        fprintf(fp, "%d %s %f\n", s[i].id, s[i].name, s[i].marks);
+    }
+
+    fclose(fp);
+}
+
+// Function to store seek positions
+int createIndex(long pos[], int max) {
+    FILE *fp = fopen("data.txt", "r");
+    if (fp == NULL) {
+        printf("File error\n");
+        return 0;
+    }
+
+    int count = 0;
+
+    while (!feof(fp) && count < max) {
+        pos[count] = ftell(fp);  // store position
+
+        int id;
+        char name[50];
+        float marks;
+
+        if (fscanf(fp, "%d %s %f", &id, name, &marks) != 3)
+            break;
+
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
+// Function to display record using position
+void displayRecord(long position) {
+    FILE *fp = fopen("data.txt", "r");
+    if (fp == NULL) {
+        printf("File error\n");
+        return;
+    }
+
+    fseek(fp, position, SEEK_SET);
+
+    struct student s;
+
+    fscanf(fp, "%d %s %f", &s.id, s.name, &s.marks);
+
+    printf("\nRecord:\n");
+    printf("ID: %d\nName: %s\nMarks: %.2f\n", s.id, s.name, s.marks);
+
+    fclose(fp);
+}
+
+// Main
+int main() {
+    struct student s[MAX];
+    long pos[MAX];
+    int n;
 
     printf("Enter number of records: ");
     scanf("%d", &n);
 
-    /* Input data */
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         printf("\nEnter details for student %d\n", i + 1);
         printf("ID: ");
         scanf("%d", &s[i].id);
@@ -39,64 +91,24 @@ int main() {
         scanf("%f", &s[i].marks);
     }
 
-    /* Write to file */
-    writeRecords(s, n, fp);
+    writeRecords(s, n);
 
-    /* Create index positions */
-    createIndex(fp, pos, n);
+    int count = createIndex(pos, MAX);
 
-    /* Display specific record */
-    printf("\nEnter record number to display (1 to %d): ", n);
+    printf("\nStored positions:\n");
+    for (int i = 0; i < count; i++) {
+        printf("Record %d position: %ld\n", i + 1, pos[i]);
+    }
+
+    int choice;
+    printf("\nEnter record number to display: ");
     scanf("%d", &choice);
 
-    if (choice >= 1 && choice <= n)
-        displayRecord(fp, pos, choice - 1);
-    else
+    if (choice >= 1 && choice <= count) {
+        displayRecord(pos[choice - 1]);
+    } else {
         printf("Invalid choice\n");
+    }
 
-    fclose(fp);
     return 0;
-}
-
-/* Write records in ASCII format */
-void writeRecords(struct Student s[], int n, FILE *fp) {
-    int i;
-
-    rewind(fp);
-
-    for (i = 0; i < n; i++) {
-        fprintf(fp, "%d %s %f\n", s[i].id, s[i].name, s[i].marks);
-    }
-}
-
-/* Create array of positions */
-void createIndex(FILE *fp, long pos[], int n) {
-    int i = 0;
-    struct Student temp;
-
-    rewind(fp);
-
-    while (!feof(fp) && i < n) {
-        pos[i] = ftell(fp);  // store position
-
-        if (fscanf(fp, "%d %s %f",
-                   &temp.id, temp.name, &temp.marks) != 3)
-            break;
-
-        i++;
-    }
-}
-
-/* Display record using position */
-void displayRecord(FILE *fp, long pos[], int index) {
-    struct Student s;
-
-    fseek(fp, pos[index], SEEK_SET);
-
-    fscanf(fp, "%d %s %f", &s.id, s.name, &s.marks);
-
-    printf("\nRecord Found:\n");
-    printf("ID: %d\n", s.id);
-    printf("Name: %s\n", s.name);
-    printf("Marks: %.2f\n", s.marks);
 }
